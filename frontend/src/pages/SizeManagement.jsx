@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import NotificationSidebar from '../components/NotificationSidebar';
 
 function SizeManagement() {
   const [sizes, setSizes] = useState([]);
@@ -7,6 +8,9 @@ function SizeManagement() {
   const [editId, setEditId] = useState(null);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
+  const [notification, setNotification] = useState({ message: '', type: 'success' });
+  const [showConfirm, setShowConfirm] = useState(null);
 
   useEffect(() => {
     fetchSizes();
@@ -14,11 +18,13 @@ function SizeManagement() {
 
   const fetchSizes = async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       const res = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/sizes`);
-      setSizes(res.data);
+      setSizes(res.data || []);
     } catch (err) {
       console.error('Failed to fetch sizes:', err);
+      setFetchError('Failed to load sizes. Please check if the backend server is running.');
     } finally {
       setLoading(false);
     }
@@ -39,8 +45,10 @@ function SizeManagement() {
     try {
       if (editId) {
         await axios.put(`${process.env.REACT_APP_API_BASE_URL}/api/sizes/${editId}`, form);
+        setNotification({ message: 'Size updated successfully!', type: 'success' });
       } else {
         await axios.post(`${process.env.REACT_APP_API_BASE_URL}/api/sizes`, form);
+        setNotification({ message: 'Size added successfully!', type: 'success' });
       }
       setForm({ name: '' });
       setEditId(null);
@@ -48,7 +56,10 @@ function SizeManagement() {
       fetchSizes();
     } catch (err) {
       console.error('Failed to save size:', err);
-      setErrors({ submit: 'Failed to save size. Please try again.' });
+      setNotification({
+        message: err.response?.data?.error || 'Failed to save size. Please try again.',
+        type: 'error',
+      });
     } finally {
       setLoading(false);
     }
@@ -59,26 +70,35 @@ function SizeManagement() {
     setEditId(size.id);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this size?')) return;
+  const handleDelete = (id) => {
+    setShowConfirm(id);
+  };
+
+  const confirmDelete = async (id) => {
+    setLoading(true);
+    setShowConfirm(null);
     try {
       await axios.delete(`${process.env.REACT_APP_API_BASE_URL}/api/sizes/${id}`);
+      setNotification({ message: 'Size deleted successfully!', type: 'success' });
       fetchSizes();
     } catch (err) {
       console.error('Failed to delete size:', err);
+      setNotification({ message: 'Failed to delete size. Please try again.', type: 'error' });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">Manage Sizes</h1>
-      <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-sm space-y-4">
-        <h2 className="text-xl font-semibold text-gray-800">
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Manage Sizes</h1>
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm space-y-4">
+        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
           {editId ? 'Edit Size' : 'Add Size'}
         </h2>
         {errors.submit && <p className="text-red-600">{errors.submit}</p>}
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Size Name
           </label>
           <input
@@ -86,7 +106,9 @@ function SizeManagement() {
             type="text"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className={`w-full p-2 border rounded ${errors.name ? 'border-red-500' : ''}`}
+            className={`w-full p-2 border rounded dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 ${
+              errors.name ? 'border-red-500' : 'border-gray-300'
+            }`}
             aria-invalid={errors.name ? 'true' : 'false'}
             aria-describedby={errors.name ? 'name-error' : undefined}
           />
@@ -97,37 +119,39 @@ function SizeManagement() {
         <button
           type="submit"
           disabled={loading}
-          className={`w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400`}
+          className={`w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400 transition-colors dark:bg-blue-600 dark:hover:bg-blue-700 shadow-sm`}
           aria-label={editId ? 'Update size' : 'Add size'}
         >
           {loading ? 'Saving...' : editId ? 'Update Size' : 'Add Size'}
         </button>
       </form>
-      <div className="bg-white p-6 rounded-lg shadow-sm">
-        <h2 className="text-lg font-semibold mb-4">Size List</h2>
-        {loading ? (
-          <p className="text-gray-600">Loading...</p>
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+        <h2 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">Size List</h2>
+        {fetchError ? (
+          <p className="text-red-600">{fetchError}</p>
+        ) : loading ? (
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
         ) : sizes.length === 0 ? (
-          <p className="text-gray-600">No sizes found.</p>
+          <p className="text-gray-600 dark:text-gray-400">No sizes found.</p>
         ) : (
           <ul className="space-y-2">
             {sizes.map((size) => (
               <li
                 key={size.id}
-                className="flex justify-between items-center p-2 border-b"
+                className="flex justify-between items-center p-2 border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors rounded-md"
               >
-                <span>{size.name}</span>
+                <span className="text-gray-800 dark:text-gray-200">{size.name}</span>
                 <div className="space-x-2">
                   <button
                     onClick={() => handleEdit(size)}
-                    className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
+                    className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 transition-colors shadow-sm"
                     aria-label={`Edit ${size.name}`}
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => handleDelete(size.id)}
-                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition-colors shadow-sm"
                     aria-label={`Delete ${size.name}`}
                   >
                     Delete
@@ -138,6 +162,34 @@ function SizeManagement() {
           </ul>
         )}
       </div>
+      <NotificationSidebar
+        message={notification.message}
+        type={notification.type}
+        onClose={() => setNotification({ message: '', type: 'success' })}
+      />
+      {showConfirm && (
+        <div className="fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg bg-yellow-500 text-white">
+          <div className="flex flex-col space-y-2">
+            <p>Are you sure you want to delete this size?</p>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => confirmDelete(showConfirm)}
+                className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors shadow-sm"
+                aria-label="Confirm delete"
+              >
+                Yes
+              </button>
+              <button
+                onClick={() => setShowConfirm(null)}
+                className="bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700 transition-colors shadow-sm"
+                aria-label="Cancel delete"
+              >
+                No
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,29 +1,27 @@
-// src/App.js
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import AdminLayout from './components/AdminLayout';
 import ProductManagement from './pages/ProductManagement';
 import CategoryManagement from './pages/CategoryManagement';
-import MaterialManagement from './pages/MaterialManagement';
 import ColorManagement from './pages/ColorManagement';
 import SizeManagement from './pages/SizeManagement';
+import MaterialManagement from './pages/MaterialManagement';
 
 function App() {
   return (
-    <Router>
+    <BrowserRouter>
       <Routes>
-        {/* Wrap all admin routes with AdminLayout */}
-        <Route element={<AdminLayout />}>
-          <Route path="/" element={<ProductManagement />} />
-          <Route path="/categories" element={<CategoryManagement />} />
-          <Route path="/materials" element={<MaterialManagement />} />
-          <Route path="/colors" element={<ColorManagement />} />
-          <Route path="/sizes" element={<SizeManagement />} />
-          {/* Fallback route for debugging */}
-          <Route path="*" element={<div>404 - Page Not Found</div>} />
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route path="products" element={<ProductManagement />} />
+          <Route path="categories" element={<CategoryManagement />} />
+          <Route path="colors" element={<ColorManagement />} />
+          <Route path="sizes" element={<SizeManagement />} />
+          <Route path="materials" element={<MaterialManagement />} />
+          <Route path="*" element={<div className="text-center text-gray-800 dark:text-gray-200">404 - Page Not Found</div>} />
         </Route>
+        <Route path="*" element={<div className="text-center text-gray-800 dark:text-gray-200">404 - Page Not Found</div>} />
       </Routes>
-    </Router>
+    </BrowserRouter>
   );
 }
 
